@@ -23,7 +23,7 @@ def restart(u=None,p=None):
 
 @route('/static/<file:path>')
 def static(file=None):
-    static_file(file)
+    return static_file(file, root="./")
 
 @route('/managers')
 @route('/Managers')
