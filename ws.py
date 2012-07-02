@@ -5,30 +5,95 @@ from gevent.pywsgi import WSGIServer
 from geventwebsocket import *
 import json
 
-queue=[] #saves last X amount of messages
-users=[] # user list for global message
+install(websocket)
 
-@get('/ws', apply=[websocket])
-def echo(ws):
+managers=[]
+queue=[] # saves last X amount of messages
+users={} # user list for global message
+pwds=[] # passwords go here
+
+# password adjustments coming in next push
+# add passwords coming in next push
+# typing to coming in next(2) pushes
+
+@route('/Managers/<pwd>')
+def mans(ws, pwd, *catch, **catching):
+    global pwds, managers, users, queue
+    if pwd in pwds:
+        managers+=[ws]
+        try:
+            for q in queue:
+                if q is not None:
+                    ws.send(q)
+        except Exception: pass
+        while True:
+            msg = ws.receive()
+            to = json.loads(msg)['data']['to']
+            try:
+                message = json.loads(msg)['data']['message']
+            except Exception:
+                message = ""
+            if msg is not None:
+                if message!="":
+                    queue+=[msg]
+                    if len(queue)>15:
+                        queue.pop(0)
+                    try:
+                        a=len(managers)
+                        for u in range(a):
+                            try:
+                                managers[u].send(msg)
+                            except WebSocketError:
+                                managers.remove(managers[u-1])
+                        users[to].send(msg)
+                    except WebSocketError: # if users disconnected
+                        del users[to] # remove users
+            else: break
+        managers.remove(managers.index(ws)) # supposedly remove user after disconnect
+
+@route('/<name>')
+def clients(ws, name, *catch, **catching):
     global users, queue
-    users+=[ws]
-    for q in queue:
-        if q is not None:
-            ws.send(q)
+    try:
+        if users[name]:
+            msg=json.dumps({"type":"message","data":{"to":name,"nick":"System","message":name+" is already in use."}})
+            ws.send(msg)
+    except Exception:pass
+    users[name]=ws
+    msg=json.dumps({"type":"message","data":{"to":name,"nick":"Managers","message":"Hello "+name+", how can we help you today?"}})
+    ws.send(msg)
+    msg=json.dumps({"type":"message","data":{"to":"Managers","nick":"System","message":name+" signed in."}})
+    a=len(managers)
+    for u in range(a):
+        try:
+            managers[u].send(msg)
+        except WebSocketError:
+            del managers[u]
     while True:
         msg = ws.receive()
-        queue+=[msg]
-        if len(queue)>10: # if messages beyond X pop X-1
-            queue.pop(0)
-        if msg is not None: # check to make sure message is not blank
-            # note that with users possibly removed during the for loop it needs to run off the length of users not users itself.
-            a=len(users) # gets users length 
-            for u in range(a):
-                try:
-                    users[u].send(msg)
-                except WebSocketError: # if users disconnected
-                    users.remove(users[u-1]) # remove users
+        try:
+            message = json.loads(msg)['data']['message']
+        except Exception:
+            message = ""
+        if msg!=None:
+            if message!="":
+                queue+=[msg]
+                if len(queue)>15:
+                    queue.pop(0)
+                a=len(managers)
+                for u in range(a):
+                    try:
+                        managers[u].send(msg)
+                    except WebSocketError:
+                        managers.remove(managers[u-1])
         else: break
-    users.remove(ws) # supposedly remove user after disconnect
+    msg=json.dumps({"type":"message","data":{"to":"Managers","nick":"System","message":name+" signed out."}})
+    a=len(managers)
+    for u in range(a):
+        try:
+            managers[u].send(msg)
+        except WebSocketError:
+            del managers[u]
+    del users[name]
 
 run(host='0.0.0.0', port=1025, server=GeventWebSocketServer) # start server
