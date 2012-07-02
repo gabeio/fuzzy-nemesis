@@ -7,10 +7,15 @@
 		<script src="http://jquery-json.googlecode.com/files/jquery.json-2.2.min.js"></script>
 		<title>WebSocket Chat</title>
 		<script>
-			var loc=location.host;
+			var loc=location.hostname;
+			var path=location.pathname.split("/");
         	if (loc=="localhost") //## change this before you production this server!
             	loc=loc+":1025";
-	        var ws=$.websocket("ws://"+loc+"/ws",{
+			%if nick=="Managers":
+			var ws=$.websocket("ws://"+loc+"/"+path[1]+"/"+path[2],{
+			%else:
+	        var ws=$.websocket("ws://"+loc+"/"+path[1],{
+	        %endif
     	        events:{
 					%if nick:
 					connect:function(e) {
@@ -31,7 +36,7 @@
 									%if nick=="Managers":
 									'<span class="to">&lt;' + e.data.to + '&gt;</span>'+
 									%endif
-									'<span class="message">' + e.data.message + '</span></div>');
+									'<span class="message"> ' + e.data.message + '</span></div>');
 								document.getElementById('messagebox').scrollTop = 9999999;
 							%if nick!="Managers":
 							}
