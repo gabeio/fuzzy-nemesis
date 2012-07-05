@@ -28,13 +28,16 @@ def mans(ws, pwd, *catch, **catching):
         except Exception: pass
         while True:
             msg = ws.receive()
-            to = json.loads(msg)['data']['to']
+            try:
+                to = json.loads(msg)['data']['to']
+            except Exception:
+                to = ""
             try:
                 message = json.loads(msg)['data']['message']
             except Exception:
                 message = ""
             if msg is not None:
-                if message!="":
+                if message!="" and to!="":
                     queue+=[msg]
                     if len(queue)>15:
                         queue.pop(0)
@@ -49,7 +52,9 @@ def mans(ws, pwd, *catch, **catching):
                     except WebSocketError: # if users disconnected
                         del users[to] # remove users
             else: break
-        managers.remove(managers.index(ws)) # supposedly remove user after disconnect
+        try:
+            managers.remove(managers.index(ws)) # supposedly remove user after disconnect
+        except Exception: pass
 
 @route('/<name>')
 def clients(ws, name, *catch, **catching):
@@ -60,6 +65,10 @@ def clients(ws, name, *catch, **catching):
             ws.send(msg)
     except Exception:pass
     users[name]=ws
+    if len(managers) == 1:
+        msg=json.dumps({"type":"message","data":{"to":name,"nick":"Managers","message":"Sorry "+name+", but there are no managers online."}})
+        yield
+        return
     msg=json.dumps({"type":"message","data":{"to":name,"nick":"Managers","message":"Hello "+name+", how can we help you today?"}})
     ws.send(msg)
     msg=json.dumps({"type":"message","data":{"to":"Managers","nick":"System","message":name+" signed in."}})
@@ -94,6 +103,8 @@ def clients(ws, name, *catch, **catching):
             managers[u].send(msg)
         except WebSocketError:
             del managers[u]
-    del users[name]
+    try:
+        del users[name]
+    except Exception: pass
 
 run(host='0.0.0.0', port=1025, server=GeventWebSocketServer) # start server
