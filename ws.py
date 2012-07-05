@@ -67,6 +67,7 @@ def clients(ws, name, *catch, **catching):
     users[name]=ws
     if len(managers) == 0:
         msg=json.dumps({"type":"message","data":{"to":name,"nick":"Managers","message":"Sorry "+name+", but there are no managers online."}})
+        ws.send(msg)
         yield
         return
     msg=json.dumps({"type":"message","data":{"to":name,"nick":"Managers","message":"Hello "+name+", how can we help you today?"}})
