@@ -65,7 +65,7 @@ def clients(ws, name, *catch, **catching):
             ws.send(msg)
     except Exception:pass
     users[name]=ws
-    if len(managers) == 1:
+    if len(managers) == 0:
         msg=json.dumps({"type":"message","data":{"to":name,"nick":"Managers","message":"Sorry "+name+", but there are no managers online."}})
         yield
         return
